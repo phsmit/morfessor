@@ -308,7 +308,7 @@ class MorfessorIO(object):
         try:
             for line in inp:
                 line = line.rstrip()
-                if len(line) > 0 and not line.startswith(self.comment_start):
+                if not line.startswith(self.comment_start):
                     if self.lowercase:
                         yield line.lower()
                     else:
