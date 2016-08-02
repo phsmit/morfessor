@@ -19,7 +19,7 @@ def _constructions_to_str(constructions):
         return ' + '.join(constructions)
     else:
         # Constructions are not strings (should be tuples of strings)
-        return ' + '.join(map(lambda x: ' '.join(x), constructions))
+        return ' + '.join(map(lambda x: ' '.join("{}/{}".format(x[0], x[1])), constructions))
 
 
 # rcount = root count (from corpus)
@@ -27,7 +27,7 @@ def _constructions_to_str(constructions):
 # splitloc = integer or tuple. Location(s) of the possible splits for virtual
 #            constructions; empty tuple or 0 if real construction
 ConstrNode = collections.namedtuple('ConstrNode',
-                                    ['rcount', 'count', 'splitloc'])
+                                    ['rcount', 'count', 'splitloct', 'splitlocp'])
 
 
 class BaselineModel(object):
@@ -121,7 +121,7 @@ class BaselineModel(object):
 
     def _remove(self, construction):
         """Remove construction from model."""
-        rcount, count, splitloc = self._analyses[construction]
+        rcount, count, splitloct, splitlocp = self._analyses[construction]
         self._modify_construction_count(construction, -count)
         return rcount, count
 
@@ -283,21 +283,9 @@ class BaselineModel(object):
         Returns list of segments.
 
         """
-        if len(compound) == 1:  # Single atom
-            return [compound]
-        if self._use_skips and self._test_skip(compound):
-            return self.segment(compound)
-        # Collect forced subsegments
-        parts = self._force_split(compound)
-        if len(parts) == 1:
-            # just one part
-            return self._recursive_split(compound)
-        self._set_compound_analysis(compound, parts)
-        # Use recursive algorithm to optimize the subsegments
-        constructions = []
-        for part in parts:
-            constructions += self._recursive_split(part)
-        return constructions
+
+        return self._recursive_split(compound)
+
 
     def _recursive_split(self, construction):
         """Optimize segmentation of the construction by recursive splitting.
@@ -305,48 +293,53 @@ class BaselineModel(object):
         Returns list of segments.
 
         """
-        if len(construction) == 1:  # Single atom
+        if len(construction[0]) == 1:  # Single atom
             return [construction]
-        if self._use_skips and self._test_skip(construction):
-            return self.segment(construction)
+
         rcount, count = self._remove(construction)
 
         # Check all binary splits and no split
         self._modify_construction_count(construction, count)
         mincost = self.get_cost()
         self._modify_construction_count(construction, -count)
-        splitloc = 0
-        for i in range(1, len(construction)):
-            if (self.nosplit_re and
-                    self.nosplit_re.match(construction[(i - 1):(i + 1)])):
-                continue
-            prefix = construction[:i]
-            suffix = construction[i:]
-            self._modify_construction_count(prefix, count)
-            self._modify_construction_count(suffix, count)
-            cost = self.get_cost()
-            self._modify_construction_count(prefix, -count)
-            self._modify_construction_count(suffix, -count)
-            if cost <= mincost:
-                mincost = cost
-                splitloc = i
 
-        if splitloc:
+        splitloct = 0
+        splitlocp = 0
+        for i in range(1, len(construction[0])):
+            for j in range(0, len(construction[1])+1):
+                prefixt = construction[0][:i]
+                prefixp = construction[1][:j]
+                suffixt = construction[0][i:]
+                suffixp = construction[1][j:]
+                self._modify_construction_count((prefixt, prefixp), count)
+                self._modify_construction_count((suffixt, suffixp), count)
+                cost = self.get_cost()
+                self._modify_construction_count((prefixt, prefixp), -count)
+                self._modify_construction_count((suffixt, suffixp), -count)
+                if cost <= mincost:
+                    mincost = cost
+                    splitloct = i
+                    splitlocp = j
+
+        if splitloct:
             # Virtual construction
             self._analyses[construction] = ConstrNode(rcount, count,
-                                                      splitloc)
-            prefix = construction[:splitloc]
-            suffix = construction[splitloc:]
-            self._modify_construction_count(prefix, count)
-            self._modify_construction_count(suffix, count)
-            lp = self._recursive_split(prefix)
-            if suffix != prefix:
-                return lp + self._recursive_split(suffix)
+                                                      splitloct, splitlocp)
+            prefixt = construction[0][:splitloct]
+            prefixp = construction[1][:splitlocp]
+            suffixt = construction[0][splitloct:]
+            suffixp = construction[1][splitlocp:]
+            self._modify_construction_count((prefixt, prefixp), count)
+            self._modify_construction_count((suffixt, suffixp), count)
+            lp = self._recursive_split((prefixt, prefixp))
+
+            if (suffixt, suffixp) != (prefixt, prefixp):
+                return lp + self._recursive_split((suffixt, suffixp))
             else:
                 return lp + lp
         else:
             # Real construction
-            self._analyses[construction] = ConstrNode(rcount, 0, tuple())
+            self._analyses[construction] = ConstrNode(rcount, 0, tuple(), tuple())
             self._modify_construction_count(construction, count)
             return [construction]
 
@@ -359,18 +352,17 @@ class BaselineModel(object):
 
         """
         if construction in self._analyses:
-            rcount, count, splitloc = self._analyses[construction]
+            rcount, count, splitloct, splitlocp = self._analyses[construction]
         else:
-            rcount, count, splitloc = 0, 0, 0
+            rcount, count, splitloct, splitlocp = 0, 0, 0, 0
         newcount = count + dcount
         if newcount == 0:
             del self._analyses[construction]
         else:
-            self._analyses[construction] = ConstrNode(rcount, newcount,
-                                                      splitloc)
-        if splitloc:
+            self._analyses[construction] = ConstrNode(rcount, newcount, splitloct, splitlocp)
+        if splitloct:
             # Virtual construction
-            children = self._splitloc_to_segmentation(construction, splitloc)
+            children = self._splitloc_to_segmentation(construction, splitloct, splitlocp)
             for child in children:
                 self._modify_construction_count(child, dcount)
         else:
@@ -380,9 +372,9 @@ class BaselineModel(object):
                 self._annot_coding.update_count(construction, count, newcount)
 
             if count == 0 and newcount > 0:
-                self._lexicon_coding.add(construction)
+                self._lexicon_coding.add(construction[0])
             elif count > 0 and newcount == 0:
-                self._lexicon_coding.remove(construction)
+                self._lexicon_coding.remove(construction[0])
 
     def _epoch_update(self, epoch_num):
         """Do model updates that are necessary between training epochs.
@@ -423,19 +415,14 @@ class BaselineModel(object):
         return tuple(splitloc[:-1])
 
     @staticmethod
-    def _splitloc_to_segmentation(compound, splitloc):
+    def _splitloc_to_segmentation(compound, splitloct, splitlocp):
         """Return segmentation corresponding to the list of split locations."""
-        if isinstance(splitloc, numbers.Number):
-            return [compound[:splitloc], compound[splitloc:]]
-        parts = []
-        startpos = 0
-        endpos = 0
-        for i in range(len(splitloc)):
-            endpos = splitloc[i]
-            parts.append(compound[startpos:endpos])
-            startpos = endpos
-        parts.append(compound[endpos:])
-        return parts
+        if isinstance(splitloct, numbers.Number) and isinstance(splitlocp, numbers.Number):
+            return [(compound[0][:splitloct],compound[1][:splitlocp]), (compound[0][splitloct:],compound[1][splitlocp:])]
+
+
+        exit("Unexpected being here in this splitting world")
+
 
     @staticmethod
     def _join_constructions(constructions):
@@ -494,7 +481,7 @@ class BaselineModel(object):
         self._check_segment_only()
         totalcount = collections.Counter()
         for count, atoms in data:
-            if len(atoms) > 0:
+            if len(atoms[0]) > 0:
                 totalcount[atoms] += count
 
         for atoms, count in totalcount.items():
@@ -544,11 +531,10 @@ class BaselineModel(object):
 
         """
         self._check_segment_only()
-        rcount, count, splitloc = self._analyses[compound]
+        rcount, count, splitloct, splitlocp = self._analyses[compound]
         constructions = []
-        if splitloc:
-            for child in self._splitloc_to_segmentation(compound,
-                                                        splitloc):
+        if splitloct:
+            for child in self._splitloc_to_segmentation(compound, splitloct, splitlocp ):
                 constructions += self.segment(child)
         else:
             constructions.append(compound)
@@ -598,8 +584,8 @@ class BaselineModel(object):
                 else:
                     raise MorfessorException("unknown algorithm '%s'" %
                                              algorithm)
-                _logger.debug("#%s -> %s" %
-                              (w, _constructions_to_str(segments)))
+                _logger.debug("#%s -> %s : %s" %
+                              (w, _constructions_to_str(segments), self.get_cost()))
             epochs += 1
 
             _logger.debug("Cost before epoch update: %s" % self.get_cost())
@@ -1397,15 +1383,15 @@ class LexiconEncoding(Encoding):
             self.atoms[atom] = c - 1
             self.update_count(atom, c, c - 1)
 
-    def get_codelength(self, construction):
-        """Return an approximate codelength for new construction."""
-        l = len(construction) + 1
-        cost = l * math.log(self.tokens + l)
-        cost -= math.log(self.boundaries + 1)
-        for atom in construction:
-            if atom in self.atoms:
-                c = self.atoms[atom]
-            else:
-                c = 1
-            cost -= math.log(c)
-        return cost
+    # def get_codelength(self, construction):
+    #     """Return an approximate codelength for new construction."""
+    #     l = len(construction) + 1
+    #     cost = l * math.log(self.tokens + l)
+    #     cost -= math.log(self.boundaries + 1)
+    #     for atom in construction:
+    #         if atom in self.atoms:
+    #             c = self.atoms[atom]
+    #         else:
+    #             c = 1
+    #         cost -= math.log(c)
+    #     return cost

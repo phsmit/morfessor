@@ -82,10 +82,10 @@ class MorfessorIO(object):
                            (self._version, d))
             for count, _, segmentation in segmentations:
                 if self.atom_separator is None:
-                    s = self.construction_separator.join(segmentation)
+                    s = self.construction_separator.join("{}/{}".format(s[0], ",".join(s[1])) for s in segmentation)
                 else:
                     s = self.construction_separator.join(
-                        (self.atom_separator.join(constr)
+                        (self.atom_separator.join("{}/{}".format(constr[0],",".join(constr[1])))
                          for constr in segmentation))
                 file_obj.write("%d %s\n" % (count, s))
         _logger.info("Done.")
