@@ -306,7 +306,7 @@ class BaselineModel(object):
         splitloct = 0
         splitlocp = 0
         for i in range(1, len(construction[0])):
-            for j in range(0, len(construction[1])+1):
+            for j in range(1, len(construction[1])):
                 prefixt = construction[0][:i]
                 prefixp = construction[1][:j]
                 suffixt = construction[0][i:]
