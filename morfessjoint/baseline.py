@@ -19,7 +19,7 @@ def _constructions_to_str(constructions):
         return ' + '.join(constructions)
     else:
         # Constructions are not strings (should be tuples of strings)
-        return ' + '.join(map(lambda x: ' '.join("{}/{}".format(x[0], x[1])), constructions))
+        return ' + '.join(map(lambda x: ' '.join(u"{}/{}".format(x[0], x[1])), constructions))
 
 
 # rcount = root count (from corpus)
