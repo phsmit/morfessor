@@ -22,5 +22,4 @@ for line in open('model.txt', encoding='utf-8'):
         if i != len(parts) -1:
             key = key + "+"
         print("{}\t{}".format(key, trans.replace(",", " ")), file=out_dict)
-    print("{} {}".format(count, " + ".join(nparts)), file=out_model) 
-        
+    print("{} {}".format(count, " + ".join(nparts)), file=out_model)

@@ -6,20 +6,21 @@ use_setuptools()
 from setuptools import setup
 
 import re
-main_py = open('morfessor/__init__.py').read()
+main_py = open('morfessjoint/__init__.py').read()
 metadata = dict(re.findall("__([a-z]+)__ = '([^']+)'", main_py))
 
 requires = [
+    'morfessor',
     #    'progressbar',
 ]
 
 setup(name='Morfessor',
       version=metadata['version'],
       author=metadata['author'],
-      author_email='morfessor@cis.hut.fi',
+      author_email='peter.smit@aalto.fi',
       url='http://www.cis.hut.fi/projects/morpho/',
-      description='Morfessor',
-      packages=['morfessor', 'morfessor.test'],
+      description='Morfessor Joint Graphemes/Phonemes',
+      packages=['morfessjoint', 'morfessjoint.test'],
       classifiers=[
           'Development Status :: 4 - Beta',
           'Intended Audience :: Science/Research',
@@ -29,11 +30,7 @@ setup(name='Morfessor',
           'Topic :: Scientific/Engineering',
       ],
       license="BSD",
-      scripts=['scripts/morfessor',
-               'scripts/morfessor-train',
-               'scripts/morfessor-segment',
-               'scripts/morfessor-evaluate',
-               ],
+      scripts=['scripts/morfessjoint-train'],
       install_requires=requires,
       extras_require={
           'docs': [l.strip() for l in open('docs/build_requirements.txt')]
