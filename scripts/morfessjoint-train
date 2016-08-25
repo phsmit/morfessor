@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-
 import argparse
 import logging
 import random
@@ -66,8 +64,8 @@ def run(args):
 
     data = []
     for f in args.trainfiles:
-        for line in open(f, encoding='utf-8'):
-            word, trans = line.strip().split("\t", 1)
+        for line in io._read_text_file(f):
+            word, trans = line.split("\t", 1)
             trans = tuple(trans.split())
             data.append((1, (word, trans)))
 
@@ -86,10 +84,10 @@ def run(args):
                     lex[p[0]] = set()
                 lex[p[0]].add(p[1])
 
-        with open(args.lexfile, encoding='utf-8') as fd:
+        with io._open_text_file_write(args.lexfile) as fd:
             for k, vals in sorted(lex.items()):
                 for v in sorted(vals):
-                    print("{}\t{}".format(k,v),file=fd)
+                    fd.write("{}\t{}\n".format(k,v), file=fd)
 
     realmodel = morfessor.BaselineModel()
     cleaned_segs = []
