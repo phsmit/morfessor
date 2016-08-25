@@ -14,7 +14,7 @@ requires = [
     #    'progressbar',
 ]
 
-setup(name='Morfessor',
+setup(name='morfessorjoint',
       version=metadata['version'],
       author=metadata['author'],
       author_email='peter.smit@aalto.fi',

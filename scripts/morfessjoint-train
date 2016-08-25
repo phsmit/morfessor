@@ -8,8 +8,8 @@ import random
 import sys
 
 import morfessor
-import morfessorjoint
-from morfessorjoint import _logger, get_version
+import morfessjoint
+from morfessjoint import _logger, get_version
 
 
 def run(args):
@@ -58,11 +58,11 @@ def run(args):
     if args.randseed is not None:
         random.seed(args.randseed)
 
-    io = morfessor.MorfessorIO(encoding=args.encoding,
+    io = morfessor.MorfessorIO(encoding='utf-8',
                  lowercase=args.lowercase)
 
 
-    model = morfessorjoint.BaselineModel(corpusweight=args.corpusweight)
+    model = morfessjoint.BaselineModel(corpusweight=args.corpusweight)
 
     data = []
     for f in args.trainfiles:
