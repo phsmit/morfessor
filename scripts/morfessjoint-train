@@ -78,7 +78,7 @@ def run(args):
 
     if args.lexfile is not None:
         lex = {}
-        for w in segmentations:
+        for _, _, w in segmentations:
             for p in w:
                 if p[0] not in lex:
                     lex[p[0]] = set()
@@ -87,12 +87,14 @@ def run(args):
         with io._open_text_file_write(args.lexfile) as fd:
             for k, vals in sorted(lex.items()):
                 for v in sorted(vals):
-                    fd.write("{}\t{}\n".format(k,v), file=fd)
+                    fd.write(u"{}\t{}\n".format(k," ".join(v)))
 
     realmodel = morfessor.BaselineModel()
     cleaned_segs = []
-    for w in segmentations:
-        cleaned_segs.append(tuple(p[0] for p in w))
+    cleaned_segs2 = []
+    for c, word, w in segmentations:
+        cleaned_segs.append((c, tuple(p[0] for p in w)))
+        cleaned_segs2.append((c, word[0], tuple(p[0] for p in w)))
 
     realmodel.load_segmentations(cleaned_segs)
     # Save model
@@ -100,7 +102,7 @@ def run(args):
         io.write_binary_model_file(args.savefile, model)
 
     if args.savesegfile is not None:
-        io.write_segmentation_file(args.savesegfile, model.get_segmentations())
+        io.write_segmentation_file(args.savesegfile, cleaned_segs)
 
 
 
