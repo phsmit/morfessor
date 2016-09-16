@@ -99,7 +99,7 @@ def run(args):
     realmodel.load_segmentations(cleaned_segs)
     # Save model
     if args.savefile is not None:
-        io.write_binary_model_file(args.savefile, model)
+        io.write_binary_model_file(args.savefile, realmodel)
 
     if args.savesegfile is not None:
         io.write_segmentation_file(args.savesegfile, cleaned_segs)
