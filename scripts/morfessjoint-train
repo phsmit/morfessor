@@ -5,6 +5,7 @@ import logging
 import random
 import sys
 
+import collections
 import morfessor
 import morfessjoint
 from morfessjoint import _logger, get_version
@@ -62,12 +63,19 @@ def run(args):
 
     model = morfessjoint.BaselineModel(corpusweight=args.corpusweight)
 
+    counts = collections.Counter()
+
+    if args.countfile is not None:
+        for line in io._read_text_file(args.countfile):
+            word, count = line.split(None, 1)
+            counts[word] = int(count)
+
     data = []
     for f in args.trainfiles:
         for line in io._read_text_file(f):
             word, trans = line.split("\t", 1)
             trans = tuple(trans.split())
-            data.append((1, (word, trans)))
+            data.append((counts.get(word,1), (word, trans)))
 
     if args.dampening == 'none':
         dampfunc = None
@@ -168,6 +176,9 @@ def main(argv):
             help="input corpus file(s) for training (text or bz2/gzipped text;"
                  " use '-' for standard input; add several times in order to "
                  "append multiple files)")
+
+    add_arg('-c', '--countfile', dest="countfile", default=None, metavar='<file>',
+            help="countfile")
 
     add_arg = parser.add_argument_group('output data files').add_argument
     add_arg('-s', '--save', dest="savefile", default=None, metavar='<file>',
