@@ -4,6 +4,7 @@ import argparse
 import logging
 import random
 import sys
+import math
 
 import collections
 import morfessor
@@ -84,7 +85,7 @@ def run(args):
     elif args.dampening == 'ones':
         dampfunc = lambda x: 1
     else:
-        raise ArgumentException("unknown dampening type '%s'" % args.dampening)
+        raise Exception("unknown dampening type '%s'" % args.dampening)
 
     c = model.load_data(data, count_modifier=dampfunc)
     e, c = model.train_batch(finish_threshold=args.finish_threshold)
