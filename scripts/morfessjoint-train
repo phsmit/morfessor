@@ -69,8 +69,16 @@ def run(args):
             trans = tuple(trans.split())
             data.append((1, (word, trans)))
 
+    if args.dampening == 'none':
+        dampfunc = None
+    elif args.dampening == 'log':
+        dampfunc = lambda x: int(round(math.log(x + 1, 2)))
+    elif args.dampening == 'ones':
+        dampfunc = lambda x: 1
+    else:
+        raise ArgumentException("unknown dampening type '%s'" % args.dampening)
 
-    c = model.load_data(data)
+    c = model.load_data(data, count_modifier=dampfunc)
     e, c = model.train_batch(finish_threshold=args.finish_threshold)
     _logger.info("Epochs: %s" % e)
 
@@ -188,6 +196,11 @@ def main(argv):
     add_arg('-r', '--randseed', dest="randseed", default=None,
             metavar='<seed>',
             help="seed for random number generator")
+    add_arg('-d', '--dampening', dest="dampening", type=_str, default='ones',
+            metavar='<type>', choices=['none', 'log', 'ones'],
+            help="frequency dampening for training data ('none', 'log', or "
+                 "'ones'; default '%(default)s')")
+
 
     # Options for semi-supervised model training
     add_arg = parser.add_argument_group(
